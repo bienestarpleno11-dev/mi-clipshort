@@ -62,7 +62,7 @@ def crear_subtitulos_clips(archivo_audio):
     model = whisper.load_model("base")
     result = model.transcribe(archivo_audio, language="es", word_timestamps=True)
     
-    clips_texto =
+   clips_texto = []
     for segment in result.get('segments',):
         for word_info in segment.get('words',):
             palabra = word_info['word'].strip().upper()
