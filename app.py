@@ -1,8 +1,8 @@
 import streamlit as st
 import asyncio
-import edge_tts
 import requests
 import whisper
+from gtts import gTTS
 from moviepy.editor import ImageClip, AudioFileClip, TextClip, CompositeVideoClip, CompositeAudioClip, afx
 import os
 
@@ -13,7 +13,6 @@ st.subheader("Generador de Videos Verticales Gratuito")
 
 # --- GENERADOR DE GUION LIBRE Y SIN CLAVES ---
 def generar_guion_libre(tema):
-    # Utilizamos un servidor de inferencia de texto público y gratuito (Hugging Face / Llama libre)
     url = "https://pollinations.ai"
     prompt = f"Escribe un guion dinámico, entretenido y viral para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos de lectura rápida. No incluyas nombres de personajes, ni acotaciones entre paréntesis, ni introducciones secundarias. Devuelve únicamente el texto limpio que leerá el narrador en un solo párrafo largo."
     
@@ -29,12 +28,13 @@ def generar_guion_libre(tema):
     except Exception:
         pass
         
-    # Plan B por si el servidor principal está saturado
     return f"¿Sabías esto sobre {tema}? Es uno de los datos más increíbles y fascinantes del mundo que la mayoría de las personas desconoce por completo. Si te apasionan estos misterios, quédate hasta el final para descubrir todo su impacto."
 
-async def generar_voz(texto, voz_config, archivo_audio="v_temp.mp3"):
-    communicate = edge_tts.Communicate(texto, voz_config)
-    await communicate.save(archivo_audio)
+# --- GENERADOR DE VOZ DE GOOGLE (100% Libre de bloqueos) ---
+def generar_voz(texto, idioma_config, archivo_audio="v_temp.mp3"):
+    # Usamos la librería oficial de Google que no requiere claves ni tokens temporales
+    tts = gTTS(text=texto, lang=idioma_config, slow=False)
+    tts.save(archivo_audio)
     return archivo_audio
 
 def generar_imagen(prompt_visual, archivo_img="i_temp.jpg"):
@@ -73,11 +73,10 @@ st.markdown("### 🎛️ Configuración de tu Short")
 tema_video = st.text_input("💡 ¿De qué quieres que hable el video?", placeholder="Ej: Curiosidades de los dinosaurios")
 
 voces = {
-    "🎙️ Voz Masculina": "es-MX-JorgeNeural",
-    "🎙️ Voz Femenina": "es-MX-DaliaNeural",
-    "🎙️ Voz Argentina": "es-AR-TomasNeural"
+    "🎙️ Voz en Español (Latinoamérica)": "es",
+    "🎙️ Voz en Español (España)": "es",
 }
-voz_elegida = st.selectbox("🗣️ Elige el narrador:", list(voces.keys()))
+voz_elegida = st.selectbox("🗣️ Elige el acento:", list(voces.keys()))
 
 st.markdown("### 🎨 Estilo Visual y Música")
 prompt_ia = st.text_input("🖼️ Estilo del fondo (En inglés funciona mejor):", placeholder="t-rex dinosaur cinematic hyperrealistic vertical 8k")
@@ -100,7 +99,8 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 st.write("**📝 Guion redactado automáticamente:**")
                 st.info(guion)
                 
-                asyncio.run(generar_voz(guion, voces[voz_elegida], audio_path))
+                # Generar voz estable con Google
+                generar_voz(guion, voces[voz_elegida], audio_path)
                 voz_clip = AudioFileClip(audio_path)
                 
                 if musica_subida is not None:
@@ -140,3 +140,4 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 
             except Exception as e:
                 st.error(f"Error durante el procesamiento: {e}")
+
