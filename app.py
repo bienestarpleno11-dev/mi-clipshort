@@ -11,7 +11,7 @@ st.set_page_config(page_title="ClipShort Pro AI", page_icon="🎬", layout="cent
 st.title("🎬 ClipShort Pro AI")
 st.subheader("Generador de Videos Verticales")
 
-# --- CONECTOR UNIVERSAL INTELIGNETE (Gemini / Grok) ---
+# --- CONECTOR UNIVERSAL INTELIGENTE (Gemini / Grok) ---
 def generar_guion_ia(tema, api_key):
     if api_key.strip().startswith("AIza"):
         url = f"https://googleapis.com{api_key}"
@@ -25,7 +25,7 @@ def generar_guion_ia(tema, api_key):
         except Exception:
             pass
     else:
-        url = "https://xai.ai"
+        url = "https://x.ai"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}"
@@ -62,9 +62,9 @@ def crear_subtitulos_clips(archivo_audio):
     model = whisper.load_model("base")
     result = model.transcribe(archivo_audio, language="es", word_timestamps=True)
     
-   clips_texto = []
-    for segment in result.get('segments',):
-        for word_info in segment.get('words',):
+    clips_texto = []
+    for segment in result.get('segments', []):
+        for word_info in segment.get('words', []):
             palabra = word_info['word'].strip().upper()
             start_time = word_info['start']
             end_time = word_info['end']
@@ -156,3 +156,8 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 
             except Exception as e:
                 st.error(f"Error en el proceso: {e}")
+
+ 
+
+
+     
