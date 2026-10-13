@@ -30,20 +30,24 @@ def generar_guion_libre(tema):
         
     return f"¿Sabías esto sobre {tema}? Es uno de los datos más increíbles y fascinantes del mundo que la mayoría de las personas desconoce por completo. Si te apasionan estos misterios, quédate hasta el final para descubrir todo su impacto."
 
-# --- GENERADOR DE VOZ DE GOOGLE (100% Libre de bloqueos) ---
+# --- GENERADOR DE VOZ DE GOOGLE ---
 def generar_voz(texto, idioma_config, archivo_audio="v_temp.mp3"):
-    # Usamos la librería oficial de Google que no requiere claves ni tokens temporales
     tts = gTTS(text=texto, lang=idioma_config, slow=False)
     tts.save(archivo_audio)
     return archivo_audio
 
+# --- GENERADOR DE IMÁGENES CORREGIDO ---
 def generar_imagen(prompt_visual, archivo_img="i_temp.jpg"):
+    # Dirección web oficial corregida para evitar el NameResolutionError
     url = f"https://pollinations.ai{prompt_visual.replace(' ', '%20')}?width=1080&height=1920&enhanced=true"
-    response = requests.get(url)
-    if response.status_code == 200:
-        with open(archivo_img, 'wb') as f:
-            f.write(response.content)
-        return archivo_img
+    try:
+        response = requests.get(url, timeout=20)
+        if response.status_code == 200:
+            with open(archivo_img, 'wb') as f:
+                f.write(response.content)
+            return archivo_img
+    except Exception as e:
+        st.error(f"Error al conectar con el servidor de imágenes: {e}")
     return None
 
 def crear_subtitulos_clips(archivo_audio):
@@ -116,7 +120,12 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 else:
                     audio_final = voz_clip
                 
-                generar_imagen(prompt_ia, img_path)
+                # Generar imagen de fondo corregida
+                imagen_resultado = generar_imagen(prompt_ia, img_path)
+                if not imagen_resultado:
+                    st.error("No se pudo descargar la imagen de fondo. Intenta con otro estilo visual.")
+                    st.stop()
+                    
                 fondo_clip = ImageClip(img_path).set_duration(voz_clip.duration)
                 
                 subtitulos = crear_subtitulos_clips(audio_path)
@@ -140,4 +149,5 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 
             except Exception as e:
                 st.error(f"Error durante el procesamiento: {e}")
+
 
