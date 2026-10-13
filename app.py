@@ -4,7 +4,7 @@ import edge_tts
 import requests
 import whisper
 from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip
-from moviepy.video.VideoClip import TextClip
+from moviepy.video.VideoClip import TextClipgsk_3fxa99brdkMGl2I93QSmWGdyb3FYz0pUTkCKzfAimXvc7xMRgJnJ
 import os
 
 # Configuración de interfaz móvil
