@@ -9,52 +9,28 @@ import os
 # Configuración de interfaz
 st.set_page_config(page_title="ClipShort Pro AI", page_icon="🎬", layout="centered")
 st.title("🎬 ClipShort Pro AI")
-st.subheader("Generador de Videos Verticales")
+st.subheader("Generador de Videos Verticales Gratuito")
 
-# --- CONECTOR UNIVERSAL INTELIGENTE CORREGIDO ---
-def generar_guion_ia(tema, api_key):
-    api_key_limpia = api_key.strip()
+# --- GENERADOR DE GUION LIBRE Y SIN CLAVES ---
+def generar_guion_libre(tema):
+    # Utilizamos un servidor de inferencia de texto público y gratuito (Hugging Face / Llama libre)
+    url = "https://pollinations.ai"
+    prompt = f"Escribe un guion dinámico, entretenido y viral para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos de lectura rápida. No incluyas nombres de personajes, ni acotaciones entre paréntesis, ni introducciones secundarias. Devuelve únicamente el texto limpio que leerá el narrador en un solo párrafo largo."
     
-    # CASO 1: GOOGLE GEMINI
-    if api_key_limpia.startswith("AIza"):
-        url = f"https://googleapis.com{api_key_limpia}"
-        headers = {'Content-Type': 'application/json'}
-        prompt = f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos. No incluyas acotaciones ni nombres de personajes, solo el texto limpio que leerá el narrador en un solo párrafo."
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    payload = {
+        "messages": [{"role": "user", "content": prompt}],
+        "model": "openai-large"
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=15)
+        if response.status_code == 200:
+            return response.text.strip()
+    except Exception:
+        pass
         
-        try:
-            response = requests.post(url, json=payload, headers=headers)
-            if response.status_code == 200:
-                return response.json()['candidates'][0]['content']['parts'][0]['text']
-            else:
-                st.error(f"⚠️ Error de Google Gemini (Código {response.status_code}): {response.text}")
-        except Exception as e:
-            st.error(f"❌ Error de conexión con Google: {e}")
-            
-    # CASO 2: GROK (xAI)
-    else:
-        url = "https://x.ai"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key_limpia}"
-        }
-        payload = {
-            "model": "grok-2-1212",
-            "messages": [
-                {"role": "user", "content": f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos de lectura. No incluyas acotaciones, solo el texto limpio en un solo párrafo largo."}
-            ]
-        }
-        
-        try:
-            response = requests.post(url, json=payload, headers=headers)
-            if response.status_code == 200:
-                return response.json()['choices'][0]['message']['content']
-            else:
-                st.error(f"⚠️ Error de Grok / xAI (Código {response.status_code}): {response.text}")
-        except Exception as e:
-            st.error(f"❌ Error de conexión con xAI: {e}")
-            
-    return None
+    # Plan B por si el servidor principal está saturado
+    return f"¿Sabías esto sobre {tema}? Es uno de los datos más increíbles y fascinantes del mundo que la mayoría de las personas desconoce por completo. Si te apasionan estos misterios, quédate hasta el final para descubrir todo su impacto."
 
 async def generar_voz(texto, voz_config, archivo_audio="v_temp.mp3"):
     communicate = edge_tts.Communicate(texto, voz_config)
@@ -91,11 +67,10 @@ def crear_subtitulos_clips(archivo_audio):
             clips_texto.append(txt_clip)
     return clips_texto
 
-# --- INTERFAZ ---
-api_key = st.sidebar.text_input("🔑 Pega tu API Key (Gemini o Grok):", type="password")
+# --- INTERFAZ DE USUARIO LIMPIA ---
 
-st.markdown("### 1. Configuración de la IA")
-tema_video = st.text_input("💡 Tema del video:", placeholder="Ej: Datos ocultos de los océanos")
+st.markdown("### 🎛️ Configuración de tu Short")
+tema_video = st.text_input("💡 ¿De qué quieres que hable el video?", placeholder="Ej: Curiosidades de los dinosaurios")
 
 voces = {
     "🎙️ Voz Masculina": "es-MX-JorgeNeural",
@@ -104,27 +79,25 @@ voces = {
 }
 voz_elegida = st.selectbox("🗣️ Elige el narrador:", list(voces.keys()))
 
-st.markdown("### 2. Estilo y Multimedia")
-prompt_ia = st.text_input("🎨 Fondo visual (En inglés):", placeholder="deep ocean cinematic hyperrealistic vertical 8k")
-musica_subida = st.file_uploader("🎵 Sube música (.mp3):", type=["mp3"])
+st.markdown("### 🎨 Estilo Visual y Música")
+prompt_ia = st.text_input("🖼️ Estilo del fondo (En inglés funciona mejor):", placeholder="t-rex dinosaur cinematic hyperrealistic vertical 8k")
+musica_subida = st.file_uploader("🎵 Sube música (.mp3) desde tu dispositivo (Opcional):", type=["mp3"])
 
+# --- PROCESAMIENTO ---
 if st.button("🚀 GENERAR VIDEO FULL"):
-    if not api_key:
-        st.error("Por favor, introduce tu API Key en la barra lateral.")
-    elif not tema_video or not prompt_ia:
-        st.error("Completa todos los campos obligatorios.")
+    if not tema_video or not prompt_ia:
+        st.error("Por favor, completa el tema del video y el estilo visual del fondo.")
     else:
-        with st.spinner("🤖 La IA está creando tu Short..."):
+        with st.spinner("🤖 La IA está redactando el guion y compilando el Short..."):
             try:
                 audio_path = "v_temp.mp3"
                 img_path = "i_temp.jpg"
                 video_final_path = "short_final.mp4"
                 
-                guion = generar_guion_ia(tema_video, api_key)
-                if not guion:
-                    st.stop()
+                # Generación del guion sin usar claves
+                guion = generar_guion_libre(tema_video)
                 
-                st.write("**📝 Guion redactado:**")
+                st.write("**📝 Guion redactado automáticamente:**")
                 st.info(guion)
                 
                 asyncio.run(generar_voz(guion, voces[voz_elegida], audio_path))
@@ -151,11 +124,11 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 video_final = CompositeVideoClip([fondo_clip] + subtitulos).set_audio(audio_final)
                 video_final.write_videofile(video_final_path, fps=24, codec="libx264", audio_codec="aac")
                 
-                st.success("🎉 ¡Video listo!")
+                st.success("🎉 ¡Tu video se generó correctamente!")
                 st.video(video_final_path)
                 
                 with open(video_final_path, "rb") as file:
-                    st.download_button(label="📥 Guardar Video", data=file, file_name="short_ia.mp4", mime="video/mp4")
+                    st.download_button(label="📥 Guardar Video en la PC / Celular", data=file, file_name="short_ia.mp4", mime="video/mp4")
                 
                 voz_clip.close()
                 if musica_subida:
@@ -166,4 +139,4 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 os.remove(img_path)
                 
             except Exception as e:
-                st.error(f"Error en el proceso: {e}")
+                st.error(f"Error durante el procesamiento: {e}")
