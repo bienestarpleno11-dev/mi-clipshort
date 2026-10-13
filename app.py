@@ -3,7 +3,8 @@ import asyncio
 import edge_tts
 import requests
 import whisper
-from moviepy.editor import ImageClip, AudioFileClip, TextClip, CompositeVideoClip, CompositeAudioClip, afx
+from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip
+from moviepy.video.VideoClip import TextClip
 import os
 
 # Configuración de interfaz móvil
@@ -13,7 +14,7 @@ st.subheader("Generador de Videos Verticales")
 
 # --- FUNCIONES NÚCLEO ---
 
-def generar_guion_gemini(tema, api_key):
+def generar_guion_ia(tema, api_key):
     url = f"https://googleapis.com{api_key}"
     headers = {'Content-Type': 'application/json'}
     prompt = f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos. No incluyas acotaciones ni nombres de personajes, solo el texto limpio que leerá el narrador."
@@ -22,7 +23,7 @@ def generar_guion_gemini(tema, api_key):
     try:
         response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200:
-            return response.json()['candidates'][0]['content']['parts'][0]['text']
+            return response.json()['candidates']['content']['parts']['text']
     except Exception:
         pass
     return None
@@ -53,12 +54,12 @@ def crear_subtitulos_clips(archivo_audio):
             end_time = word_info['end']
             duracion = end_time - start_time if (end_time - start_time) > 0 else 0.1
                 
-            txt_clip = (TextClip(palabra, fontsize=85, color='yellow', font='Arial-Bold',
+            txt_clip = (TextClip(text=palabra, font_size=85, color='yellow', font='Arial-Bold',
                                  stroke_color='black', stroke_width=4, method='caption', 
                                  size=(880, None))
-                        .set_start(start_time)
-                        .set_duration(duracion)
-                        .set_position(('center', 'center')))
+                        .with_start(start_time)
+                        .with_duration(duracion)
+                        .with_position(('center', 'center')))
             clips_texto.append(txt_clip)
     return clips_texto
 
@@ -94,7 +95,7 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 img_path = "i_temp.jpg"
                 video_final_path = "short_final.mp4"
                 
-                guion = generar_guion_gemini(tema_video, gemini_key)
+                guion = generar_guion_ia(tema_video, gemini_key)
                 if not guion:
                     st.error("No se pudo generar el guion. Revisa tu API Key.")
                     st.stop()
@@ -109,21 +110,18 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                     with open("m_temp.mp3", "wb") as f:
                         f.write(musica_subida.getbuffer())
                     musica_clip = AudioFileClip("m_temp.mp3")
-                    if musica_clip.duration < voz_clip.duration:
-                        musica_clip = afx.audio_loop(musica_clip, duration=voz_clip.duration)
-                    else:
-                        musica_clip = musica_clip.set_duration(voz_clip.duration)
-                    musica_clip = musica_clip.volumex(0.12)
+                    # Ajuste de duración simple para compatibilidad
+                    musica_clip = musica_clip.with_duration(voz_clip.duration).with_volume_factor(0.12)
                     audio_final = CompositeAudioClip([voz_clip, musica_clip])
                 else:
                     audio_final = voz_clip
                 
                 generar_imagen(prompt_ia, img_path)
-                fondo_clip = ImageClip(img_path).set_duration(voz_clip.duration)
+                fondo_clip = ImageClip(img_path).with_duration(voz_clip.duration)
                 
                 subtitulos = crear_subtitulos_clips(audio_path)
                 
-                video_final = CompositeVideoClip([fondo_clip] + subtitulos).set_audio(audio_final)
+                video_final = CompositeVideoClip([fondo_clip] + subtitulos).with_audio(audio_final)
                 video_final.write_videofile(video_final_path, fps=24, codec="libx264", audio_codec="aac")
                 
                 st.success("🎉 ¡Video listo para descargar!")
