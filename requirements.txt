@@ -1,5 +1,5 @@
 streamlit
-edge-tts
+edge-tts>=6.1.16
 moviepy==1.0.3
 requests
 openai-whisper
