@@ -3,29 +3,45 @@ import asyncio
 import edge_tts
 import requests
 import whisper
-from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip
-from moviepy.video.VideoClip import TextClipgsk_3fxa99brdkMGl2I93QSmWGdyb3FYz0pUTkCKzfAimXvc7xMRgJnJ
+from moviepy.editor import ImageClip, AudioFileClip, TextClip, CompositeVideoClip, CompositeAudioClip, afx
 import os
 
-# Configuración de interfaz móvil
+# Configuración de interfaz
 st.set_page_config(page_title="ClipShort Pro AI", page_icon="🎬", layout="centered")
 st.title("🎬 ClipShort Pro AI")
 st.subheader("Generador de Videos Verticales")
 
-# --- FUNCIONES NÚCLEO ---
-
+# --- CONECTOR UNIVERSAL INTELIGNETE (Gemini / Grok) ---
 def generar_guion_ia(tema, api_key):
-    url = f"https://googleapis.com{api_key}"
-    headers = {'Content-Type': 'application/json'}
-    prompt = f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos. No incluyas acotaciones ni nombres de personajes, solo el texto limpio que leerá el narrador."
-    
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
-            return response.json()['candidates']['content']['parts']['text']
-    except Exception:
-        pass
+    if api_key.strip().startswith("AIza"):
+        url = f"https://googleapis.com{api_key}"
+        headers = {'Content-Type': 'application/json'}
+        prompt = f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos. No incluyas acotaciones ni nombres de personajes, solo el texto limpio que leerá el narrador en un solo párrafo."
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        try:
+            response = requests.post(url, json=payload, headers=headers)
+            if response.status_code == 200:
+                return response.json()['candidates']['content']['parts']['text']
+        except Exception:
+            pass
+    else:
+        url = "https://xai.ai"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        payload = {
+            "model": "grok-2-1212",
+            "messages": [
+                {"role": "user", "content": f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos de lectura. No incluyas acotaciones, solo el texto limpio en un solo párrafo."}
+            ]
+        }
+        try:
+            response = requests.post(url, json=payload, headers=headers)
+            if response.status_code == 200:
+                return response.json()['choices']['message']['content']
+        except Exception:
+            pass
     return None
 
 async def generar_voz(texto, voz_config, archivo_audio="voz.mp3"):
@@ -46,27 +62,25 @@ def crear_subtitulos_clips(archivo_audio):
     model = whisper.load_model("base")
     result = model.transcribe(archivo_audio, language="es", word_timestamps=True)
     
-    clips_texto = []
-    for segment in result.get('segments', []):
-        for word_info in segment.get('words', []):
+    clips_texto =
+    for segment in result.get('segments',):
+        for word_info in segment.get('words',):
             palabra = word_info['word'].strip().upper()
             start_time = word_info['start']
             end_time = word_info['end']
             duracion = end_time - start_time if (end_time - start_time) > 0 else 0.1
                 
-            txt_clip = (TextClip(text=palabra, font_size=85, color='yellow', font='Arial-Bold',
+            txt_clip = (TextClip(palabra, fontsize=85, color='yellow', font='Arial-Bold',
                                  stroke_color='black', stroke_width=4, method='caption', 
                                  size=(880, None))
-                        .with_start(start_time)
-                        .with_duration(duracion)
-                        .with_position(('center', 'center')))
+                        .set_start(start_time)
+                        .set_duration(duracion)
+                        .set_position(('center', 'center')))
             clips_texto.append(txt_clip)
     return clips_texto
 
-# --- INTERFAZ COMPATIBLE CON MÓVIL ---
-
-gemini_key = st.sidebar.text_input("🔑 API Key de Google Gemini:", type="password")
-st.sidebar.caption("Consigue tu clave gratis en https://google.com")
+# --- INTERFAZ ---
+api_key = st.sidebar.text_input("🔑 Pega tu API Key (Gemini o Grok):", type="password")
 
 st.markdown("### 1. Configuración de la IA")
 tema_video = st.text_input("💡 Tema del video:", placeholder="Ej: Datos ocultos de los océanos")
@@ -79,23 +93,22 @@ voces = {
 voz_elegida = st.selectbox("🗣️ Elige el narrador:", list(voces.keys()))
 
 st.markdown("### 2. Estilo y Multimedia")
-prompt_ia = st.text_input("🎨 Fondo visual (En inglés funciona mejor):", placeholder="deep ocean cinematic hyperrealistic vertical 8k")
-musica_subida = st.file_uploader("🎵 Sube música desde tu celular (Opcional):", type=["mp3"])
+prompt_ia = st.text_input("🎨 Fondo visual (En inglés):", placeholder="deep ocean cinematic hyperrealistic vertical 8k")
+musica_subida = st.file_uploader("🎵 Sube música (.mp3):", type=["mp3"])
 
-# --- PROCESAMIENTO ---
 if st.button("🚀 GENERAR VIDEO FULL"):
-    if not gemini_key:
-        st.error("Por favor, introduce tu API Key de Gemini en el menú lateral.")
+    if not api_key:
+        st.error("Por favor, introduce tu API Key en la barra lateral.")
     elif not tema_video or not prompt_ia:
-        st.error("Completa el tema y el estilo visual.")
+        st.error("Completa todos los campos obligatorios.")
     else:
-        with st.spinner("🤖 Creando tu video en la nube..."):
+        with st.spinner("🤖 La IA está creando tu Short..."):
             try:
                 audio_path = "v_temp.mp3"
                 img_path = "i_temp.jpg"
                 video_final_path = "short_final.mp4"
                 
-                guion = generar_guion_ia(tema_video, gemini_key)
+                guion = generar_guion_ia(tema_video, api_key)
                 if not guion:
                     st.error("No se pudo generar el guion. Revisa tu API Key.")
                     st.stop()
@@ -110,27 +123,29 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                     with open("m_temp.mp3", "wb") as f:
                         f.write(musica_subida.getbuffer())
                     musica_clip = AudioFileClip("m_temp.mp3")
-                    # Ajuste de duración simple para compatibilidad
-                    musica_clip = musica_clip.with_duration(voz_clip.duration).with_volume_factor(0.12)
+                    if musica_clip.duration < voz_clip.duration:
+                        musica_clip = afx.audio_loop(musica_clip, duration=voz_clip.duration)
+                    else:
+                        musica_clip = musica_clip.set_duration(voz_clip.duration)
+                    musica_clip = musica_clip.volumex(0.12)
                     audio_final = CompositeAudioClip([voz_clip, musica_clip])
                 else:
                     audio_final = voz_clip
                 
                 generar_imagen(prompt_ia, img_path)
-                fondo_clip = ImageClip(img_path).with_duration(voz_clip.duration)
+                fondo_clip = ImageClip(img_path).set_duration(voz_clip.duration)
                 
                 subtitulos = crear_subtitulos_clips(audio_path)
                 
-                video_final = CompositeVideoClip([fondo_clip] + subtitulos).with_audio(audio_final)
+                video_final = CompositeVideoClip([fondo_clip] + subtitulos).set_audio(audio_final)
                 video_final.write_videofile(video_final_path, fps=24, codec="libx264", audio_codec="aac")
                 
-                st.success("🎉 ¡Video listo para descargar!")
+                st.success("🎉 ¡Video listo!")
                 st.video(video_final_path)
                 
                 with open(video_final_path, "rb") as file:
-                    st.download_button(label="📥 Guardar en Galería", data=file, file_name="short_ia.mp4", mime="video/mp4")
+                    st.download_button(label="📥 Guardar Video", data=file, file_name="short_ia.mp4", mime="video/mp4")
                 
-                # Limpieza de archivos temporales
                 voz_clip.close()
                 if musica_subida:
                     musica_clip.close()
