@@ -11,45 +11,57 @@ st.set_page_config(page_title="ClipShort Pro AI", page_icon="🎬", layout="cent
 st.title("🎬 ClipShort Pro AI")
 st.subheader("Generador de Videos Verticales")
 
-# --- CONECTOR UNIVERSAL INTELIGENTE (Gemini / Grok) ---
+# --- CONECTOR UNIVERSAL INTELIGENTE CORREGIDO ---
 def generar_guion_ia(tema, api_key):
-    if api_key.strip().startswith("AIza"):
-        url = f"https://googleapis.com{api_key}"
+    api_key_limpia = api_key.strip()
+    
+    # CASO 1: GOOGLE GEMINI
+    if api_key_limpia.startswith("AIza"):
+        url = f"https://googleapis.com{api_key_limpia}"
         headers = {'Content-Type': 'application/json'}
         prompt = f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos. No incluyas acotaciones ni nombres de personajes, solo el texto limpio que leerá el narrador en un solo párrafo."
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        
         try:
             response = requests.post(url, json=payload, headers=headers)
             if response.status_code == 200:
-                return response.json()['candidates']['content']['parts']['text']
-        except Exception:
-            pass
+                return response.json()['candidates'][0]['content']['parts'][0]['text']
+            else:
+                st.error(f"⚠️ Error de Google Gemini (Código {response.status_code}): {response.text}")
+        except Exception as e:
+            st.error(f"❌ Error de conexión con Google: {e}")
+            
+    # CASO 2: GROK (xAI)
     else:
         url = "https://x.ai"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
+            "Authorization": f"Bearer {api_key_limpia}"
         }
         payload = {
             "model": "grok-2-1212",
             "messages": [
-                {"role": "user", "content": f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos de lectura. No incluyas acotaciones, solo el texto limpio en un solo párrafo."}
+                {"role": "user", "content": f"Escribe un guion dinámico para un video corto de TikTok sobre: {tema}. Debe durar unos 30 segundos de lectura. No incluyas acotaciones, solo el texto limpio en un solo párrafo largo."}
             ]
         }
+        
         try:
             response = requests.post(url, json=payload, headers=headers)
             if response.status_code == 200:
-                return response.json()['choices']['message']['content']
-        except Exception:
-            pass
+                return response.json()['choices'][0]['message']['content']
+            else:
+                st.error(f"⚠️ Error de Grok / xAI (Código {response.status_code}): {response.text}")
+        except Exception as e:
+            st.error(f"❌ Error de conexión con xAI: {e}")
+            
     return None
 
-async def generar_voz(texto, voz_config, archivo_audio="voz.mp3"):
+async def generar_voz(texto, voz_config, archivo_audio="v_temp.mp3"):
     communicate = edge_tts.Communicate(texto, voz_config)
     await communicate.save(archivo_audio)
     return archivo_audio
 
-def generar_imagen(prompt_visual, archivo_img="fondo.jpg"):
+def generar_imagen(prompt_visual, archivo_img="i_temp.jpg"):
     url = f"https://pollinations.ai{prompt_visual.replace(' ', '%20')}?width=1080&height=1920&enhanced=true"
     response = requests.get(url)
     if response.status_code == 200:
@@ -110,7 +122,6 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 
                 guion = generar_guion_ia(tema_video, api_key)
                 if not guion:
-                    st.error("No se pudo generar el guion. Revisa tu API Key.")
                     st.stop()
                 
                 st.write("**📝 Guion redactado:**")
@@ -156,8 +167,3 @@ if st.button("🚀 GENERAR VIDEO FULL"):
                 
             except Exception as e:
                 st.error(f"Error en el proceso: {e}")
-
- 
-
-
-     
